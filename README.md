@@ -6,19 +6,18 @@ Ever looked at XBRL taxonomy files and thought, “What am I even looking at?”
 
 ## 🚀 Features
 
-- Parses English and Japanese labels from XBRL label linkbases.
+- Parses labels from XBRL label linkbases. Currently supporting English and Japanese
 - Extracts concept metadata (e.g. data type, balance type, substitution group) from the `.xsd` file.
 - Builds a concept hierarchy from `_pre.xml` files.
 - Enriches hierarchy with human-readable labels and metadata.
 - **Interactive Filtering**: Allows users to filter the treemap visualization by selecting specific parent and child concepts.
-- Saves to CSV for downstream processing.
 - Visualizes the hierarchy using an interactive **Plotly treemap**.
 
 ---
 
 ## 🧰 Requirements
 
-- Python 3.7+
+- Python 3.11+
 - Install dependencies using Poetry:
 
 ```bash
@@ -73,10 +72,6 @@ It will:
 2. Parse the concept definitions and linkbase labels
 3. Extract relationships from _pre.xml files
 4. Provide an interactive interface to filter and visualize the hierarchy
-
-- `xbrl_financial_concepts_with_labels.csv` – all financial concepts with metadata and labels
-- `xbrl_financial_hierarchy.csv` – raw parent-child concept relationships
-- `xbrl_financial_hierarchy_with_labels.csv` – enriched hierarchy with readable labels and metadata
 - A treemap visualization will appear in your browser, with options to filter by parent and child concepts
 
 ---
