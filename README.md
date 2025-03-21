@@ -76,14 +76,6 @@ It will:
 
 ---
 
-## 📊 Example Output
-
-| Concept ID       | Concept Name       | English Label       | Japanese Label       | ... |
-|------------------|--------------------|---------------------|----------------------|-----|
-| jp210000-000001  | CashEquivalents    | Cash and Equivalents| 現金及び同等物         | ... |
-
----
-
 ## ✍️ Author
 
 Elroy Galbraith
