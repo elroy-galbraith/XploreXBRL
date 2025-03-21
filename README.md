@@ -31,21 +31,31 @@ poetry install
 
 ```
 .
-├── app.py                          # Streamlit application
-├── pyproject.toml                  # Poetry configuration file
+├── LICENSE
 ├── README.md
-|── タクソノミ
-    ...
-|   └── jppfs/
-│       └── 2024-11-01/
-│           ├── jppfs_cor_2024-11-01.xsd
-│           ├── label/
-│           │   ├── jp_lab.xml
-│           │   └── en_lab.xml
-│           └── r/
-│               ├── *_pre.xml
-│               ├── *_def.xml
-│               └── *_cal.xml
+├── poetry.lock
+├── pyproject.toml
+├── structure.txt
+├── tests
+│   └── __init__.py
+├── xplore_xbrl
+│   ├── __init__.py
+│   └── app.py
+└── タクソノミ
+    ├── samples
+    │   └── 2024-11-01
+    └── taxonomy
+        ...
+        ├── jppfs
+           └── 2024-11-01/
+               ├── jppfs_cor_2024-11-01.xsd
+               ├── label/
+               │   ├── jp_lab.xml
+               │   └── en_lab.xml
+               └── r/
+                   ├── *_pre.xml
+                   ├── *_def.xml
+                   └── *_cal.xml
 ```
 
 ---
