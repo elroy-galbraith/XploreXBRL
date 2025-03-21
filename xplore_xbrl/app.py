@@ -11,6 +11,15 @@ st.set_page_config(layout="wide")
 def main():
     st.title('Xplore XBRL')
     
+    st.write("""
+    This app allows you to explore the XBRL taxonomy files for the Japanese Financial Reporting Standards (JFRs).
+    
+    The app currently supports the following standards:
+    - JPPFS (Japanese Private Placement Fund Standards)
+    - JPPS (Japanese Public Placement Standards)
+    
+    """)
+    
     # Configuration
     XSD_FOLDER = "タクソノミ/taxonomy/jppfs/2024-11-01"
     XSD_FILE = os.path.join(XSD_FOLDER, "jppfs_cor_2024-11-01.xsd")
