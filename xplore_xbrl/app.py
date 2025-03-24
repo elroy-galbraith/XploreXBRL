@@ -41,24 +41,29 @@ def main():
             
         st.header('Visualize Hierarchy')
         # Extract unique parent and child labels
-        unique_parents = ['All'] + list(hierarchy_df['Parent English Label'].unique())
-        unique_children = ['All'] + list(hierarchy_df['Child English Label'].unique())
+        hierarchy_df["Parent Combined Label"] = hierarchy_df["Parent English Label"] + " / " + hierarchy_df["Parent Japanese Label"]
+        hierarchy_df["Child Combined Label"] = hierarchy_df["Child English Label"] + " / " + hierarchy_df["Child Japanese Label"]
 
-        # Add Streamlit widgets for filtering
+        unique_parents = ['All'] + sorted(hierarchy_df["Parent Combined Label"].unique())
+        unique_children = ['All'] + sorted(hierarchy_df["Child Combined Label"].unique())
+
         col1, col2 = st.columns(2)
         with col1:
-            selected_parent = st.selectbox('Select Parent', unique_parents)
+            selected_parent = st.selectbox('Select Parent (EN / JA)', unique_parents)
         with col2:
-            selected_child = st.selectbox('Select Child', unique_children)
+            selected_child = st.selectbox('Select Child (EN / JA)', unique_children)
 
-        # Filter the DataFrame based on selections
+        # Filter
+        filtered_df = hierarchy_df.copy()
         if selected_parent != 'All':
-            hierarchy_df = hierarchy_df[hierarchy_df['Parent English Label'] == selected_parent]
+            filtered_df = filtered_df[filtered_df["Parent Combined Label"] == selected_parent]
         if selected_child != 'All':
-            hierarchy_df = hierarchy_df[hierarchy_df['Child English Label'] == selected_child]
+            filtered_df = filtered_df[filtered_df["Child Combined Label"] == selected_child]
+            
+        st.dataframe(filtered_df)
 
         # Update the treemap visualization with the filtered DataFrame
-        fig = visualize_hierarchy(hierarchy_df)
+        fig = visualize_hierarchy(filtered_df)
         st.plotly_chart(fig)
         
         st.header('Visualize Calculations')
