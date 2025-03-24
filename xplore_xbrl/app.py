@@ -47,6 +47,9 @@ def main():
         enriched_df = enrich_calculations_with_labels(final_df, df)
         st.dataframe(enriched_df.head())
         
+        G = build_calc_graph(enriched_df)
+        show_graph_in_streamlit(G)
+        
     except Exception as e:
         st.error(f"An error occurred: {e}")
 
