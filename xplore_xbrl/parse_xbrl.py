@@ -90,3 +90,16 @@ def build_hierarchy_dataframe(hierarchy, labels_dict, concepts_list):
     df["Balance Type"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("Balance Type", "N/A"))
 
     return df
+
+def parse_calculations(cal_files, namespaces):
+    calculations = {}
+    for file in cal_files:
+        tree = ET.parse(file)
+        root = tree.getroot()
+        for arc in root.findall(".//link:calculationArc", namespaces):
+            parent = arc.attrib.get("{http://www.w3.org/1999/xlink}from")
+            child = arc.attrib.get("{http://www.w3.org/1999/xlink}to")
+            weight = arc.attrib.get("weight", "1")
+            if parent and child:
+                calculations.setdefault(parent, []).append((child, weight))
+    return calculations

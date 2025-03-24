@@ -1,7 +1,7 @@
 import streamlit as st
 import os
 from parse_xbrl import *
-import plotly.express as px
+from viz_xbrl import *
 
 st.set_page_config(layout="wide")
 
@@ -60,16 +60,14 @@ def main():
         # Update the treemap visualization with the filtered DataFrame
         fig = visualize_hierarchy(hierarchy_df)
         st.plotly_chart(fig)
+        
+        st.header('Visualize Calculations')
+        calculations = parse_calculations(relationship_files["cal"], NAMESPACES)
+        fig = visualize_calculations(calculations, labels)
+        st.plotly_chart(fig)
+        
     except Exception as e:
         st.error(f"An error occurred: {e}")
-
-def visualize_hierarchy(df):
-    fig = px.treemap(df,
-                     path=["Parent English Label", "Child English Label"],
-                     values=[1] * len(df),
-                     title="XBRL Financial Hierarchy (English Labels)")
-    fig.update_layout(margin=dict(t=50, l=25, r=25, b=25))
-    return fig
 
 if __name__ == "__main__":
     main()
