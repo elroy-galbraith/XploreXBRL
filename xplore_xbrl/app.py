@@ -63,8 +63,8 @@ def main():
         
         st.header('Visualize Calculations')
         calculations = parse_calculations(relationship_files["cal"], NAMESPACES)
-        fig = visualize_calculations(calculations, labels)
-        st.plotly_chart(fig)
+        calculations_df = calculations_to_dataframe(calculations, labels)
+        st.dataframe(calculations_df)
         
     except Exception as e:
         st.error(f"An error occurred: {e}")

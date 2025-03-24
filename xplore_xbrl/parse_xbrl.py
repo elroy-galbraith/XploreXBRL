@@ -103,3 +103,19 @@ def parse_calculations(cal_files, namespaces):
             if parent and child:
                 calculations.setdefault(parent, []).append((child, weight))
     return calculations
+
+def calculations_to_dataframe(calculations, labels_dict):
+    data = []
+    for parent, children in calculations.items():
+        parent_label = labels_dict.get(parent, {}).get("English Label", parent)
+        for child, weight in children:
+            child_label = labels_dict.get(child, {}).get("English Label", child)
+            data.append({
+                "Parent": parent,
+                "Parent Label": parent_label,
+                "Child": child,
+                "Child Label": child_label,
+                "Weight": weight
+            })
+    df = pd.DataFrame(data, columns=["Parent", "Parent Label", "Child", "Child Label", "Weight"])
+    return df
