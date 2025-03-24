@@ -1,54 +1,41 @@
+# --- parse_xbrl.py ---
 import os
 import xml.etree.ElementTree as ET
 import pandas as pd
 
-# Function to parse labels
-def parse_labels(label_folder, namespaces):
-    labels_dict = {}
-    for file in os.listdir(label_folder):
-        if file.endswith("_lab.xml") or file.endswith("lab-en.xml"):
-            path = os.path.join(label_folder, file)
-            tree = ET.parse(path)
-            root = tree.getroot()
-
-            concept_map = {
-                loc.attrib.get("{http://www.w3.org/1999/xlink}label"): loc.attrib.get("{http://www.w3.org/1999/xlink}href", "").split("#")[-1]
-                for loc in root.findall(".//link:loc", namespaces)
-            }
-
-            label_map = {}
-            for label in root.findall(".//link:label", namespaces):
-                label_id = label.attrib.get("{http://www.w3.org/1999/xlink}label")
-                lang = label.attrib.get("{http://www.w3.org/XML/1998/namespace}lang", "N/A")
-                if label_id and lang in ["ja", "en"]:
-                    label_map.setdefault(label_id, {})[lang] = label.text.strip() if label.text else ""
-
-            for arc in root.findall(".//link:labelArc", namespaces):
-                concept_ref = arc.attrib.get("{http://www.w3.org/1999/xlink}from")
-                label_ref = arc.attrib.get("{http://www.w3.org/1999/xlink}to")
-                concept_name = concept_map.get(concept_ref)
-                if concept_name and label_ref in label_map:
-                    labels_dict.setdefault(concept_name, {"concept_id": concept_ref, "ja": "N/A", "en": "N/A"})
-                    labels_dict[concept_name].update(label_map[label_ref])
-    return labels_dict
-
-# Function to parse XSD file
-def parse_xsd(xsd_file, labels_dict, namespaces):
-    concepts = []
-    tree = ET.parse(xsd_file)
+def parse_lab_xml(filepath, namespaces):
+    tree = ET.parse(filepath)
     root = tree.getroot()
-    for element in root.findall(".//xs:element", namespaces):
-        concept_name = element.attrib.get("name", "Unknown")
-        concept_id = element.attrib.get("id", "Unknown")
-        data_type = element.attrib.get("type", "Unknown")
-        substitution_group = element.attrib.get("substitutionGroup", "N/A")
-        balance_type = element.attrib.get("{http://www.xbrl.org/2003/instance}balance", "N/A")
-        ja_label = labels_dict.get(concept_id, {}).get("ja", "N/A")
-        en_label = labels_dict.get(concept_id, {}).get("en", "N/A")
-        concepts.append([concept_id, concept_name, en_label, ja_label, data_type, substitution_group, balance_type])
-    return concepts
 
-# Function to find relationship files
+    # Collect labels: id → (text, label)
+    label_map = {}
+    for label in root.findall('.//link:label', namespaces):
+        role = label.get('{http://www.w3.org/1999/xlink}role')
+        if role != "http://www.xbrl.org/2003/role/label":
+            continue
+        id_ = label.get('id')
+        text = label.text
+        label_ = label.get('{http://www.w3.org/1999/xlink}label')
+        label_map[label_] = {
+            'id': id_,
+            'japanese': text,
+            'label': label_
+        }
+
+    # Collect arcs (linking loc "from" to label "to")
+    arcs = []
+    for arc in root.findall('.//link:labelArc', namespaces):
+        from_ = arc.get('{http://www.w3.org/1999/xlink}from')
+        to_ = arc.get('{http://www.w3.org/1999/xlink}to')
+        if to_ in label_map:
+            entry = label_map[to_].copy()
+            entry['from'] = from_
+            entry['to'] = to_
+            arcs.append(entry)
+
+    return pd.DataFrame(arcs)
+
+# Find relationship files
 def find_relationship_files(folder):
     files = {"pre": [], "def": [], "cal": []}
     for subdir, _, file_list in os.walk(folder):
@@ -62,60 +49,47 @@ def find_relationship_files(folder):
                 files["cal"].append(path)
     return files
 
-def extract_hierarchy(pre_files, namespaces):
-    hierarchy = {}
-    for file in pre_files:
-        tree = ET.parse(file)
-        root = tree.getroot()
-        for arc in root.findall(".//link:presentationArc", namespaces):
-            parent = arc.attrib.get("{http://www.w3.org/1999/xlink}from")
-            child = arc.attrib.get("{http://www.w3.org/1999/xlink}to")
-            if parent and child:
-                hierarchy.setdefault(parent, []).append(child)
-    return hierarchy
+# 
+def parse_calculations(filepath, namespaces):
+    tree = ET.parse(filepath)
+    root = tree.getroot()
 
-def build_hierarchy_dataframe(hierarchy, labels_dict, concepts_list):
-    df = pd.DataFrame([(p, c) for p, children in hierarchy.items() for c in children], columns=["Parent", "Child"])
+    calc_arcs = []
+    for arc in root.findall('.//link:calculationArc', namespaces):
+        from_label = arc.get('{http://www.w3.org/1999/xlink}from')
+        to_label = arc.get('{http://www.w3.org/1999/xlink}to')
+        weight = arc.get('weight')
+        order = arc.get('order')
+        calc_arcs.append({
+            'from': from_label,
+            'to': to_label,
+            'weight': weight,
+            'order': order
+        })
+    return pd.DataFrame(calc_arcs)
 
-    label_lookup = {row[0]: {"English Label": row[2], "Japanese Label": row[3],
-                             "Data Type": row[4], "Substitution Group": row[5], "Balance Type": row[6]}
-                    for row in concepts_list}
+def enrich_calculations_with_labels(calc_df, label_df):
+    # Rename columns in label_df to avoid collisions
+    label_from = label_df.rename(columns={
+        'id': 'id_from',
+        'japanese': 'japanese_from',
+        'from': 'label_from',
+        'to': 'label_to_from'
+    })
 
-    df["Parent English Label"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("English Label", x))
-    df["Parent Japanese Label"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("Japanese Label", x))
-    df["Child English Label"] = df["Child"].map(lambda x: label_lookup.get(x, {}).get("English Label", x))
-    df["Child Japanese Label"] = df["Child"].map(lambda x: label_lookup.get(x, {}).get("Japanese Label", x))
-    df["Data Type"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("Data Type", "N/A"))
-    df["Substitution Group"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("Substitution Group", "N/A"))
-    df["Balance Type"] = df["Parent"].map(lambda x: label_lookup.get(x, {}).get("Balance Type", "N/A"))
+    label_to = label_df.rename(columns={
+        'id': 'id_to',
+        'japanese': 'japanese_to',
+        'from': 'label_to',
+        'to': 'label_to_to'
+    })
 
-    return df
+    # Merge: calc.from == label.label
+    merged = calc_df \
+        .merge(label_from, left_on='from', right_on='label_from', how='left') \
+        .merge(label_to, left_on='to', right_on='label_to', how='left')
 
-def parse_calculations(cal_files, namespaces):
-    calculations = {}
-    for file in cal_files:
-        tree = ET.parse(file)
-        root = tree.getroot()
-        for arc in root.findall(".//link:calculationArc", namespaces):
-            parent = arc.attrib.get("{http://www.w3.org/1999/xlink}from")
-            child = arc.attrib.get("{http://www.w3.org/1999/xlink}to")
-            weight = arc.attrib.get("weight", "1")
-            if parent and child:
-                calculations.setdefault(parent, []).append((child, weight))
-    return calculations
-
-def calculations_to_dataframe(calculations, labels_dict):
-    data = []
-    for parent, children in calculations.items():
-        parent_label = labels_dict.get(parent, {}).get("English Label", parent)
-        for child, weight in children:
-            child_label = labels_dict.get(child, {}).get("English Label", child)
-            data.append({
-                "Parent": parent,
-                "Parent Label": parent_label,
-                "Child": child,
-                "Child Label": child_label,
-                "Weight": weight
-            })
-    df = pd.DataFrame(data, columns=["Parent", "Parent Label", "Child", "Child Label", "Weight"])
-    return df
+    return merged[[
+        'from', 'japanese_from', 'to', 'japanese_to', 'weight', 'order'
+    ]]
+    

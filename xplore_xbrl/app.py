@@ -32,44 +32,20 @@ def main():
     }
     
     try:
+        df = parse_lab_xml("タクソノミ/taxonomy/jppfs/2024-11-01/label/jppfs_2024-11-01_lab.xml", NAMESPACES)
+        # st.dataframe(df.head())
         
-        labels = parse_labels(LABEL_FOLDER, NAMESPACES)
-        concepts = parse_xsd(XSD_FILE, labels, NAMESPACES)
         relationship_files = find_relationship_files(R_FOLDER)
-        hierarchy = extract_hierarchy(relationship_files["pre"], NAMESPACES)
-        hierarchy_df = build_hierarchy_dataframe(hierarchy, labels, concepts)
-            
-        st.header('Visualize Hierarchy')
-        # Extract unique parent and child labels
-        hierarchy_df["Parent Combined Label"] = hierarchy_df["Parent English Label"] + " / " + hierarchy_df["Parent Japanese Label"]
-        hierarchy_df["Child Combined Label"] = hierarchy_df["Child English Label"] + " / " + hierarchy_df["Child Japanese Label"]
-
-        unique_parents = ['All'] + sorted(hierarchy_df["Parent Combined Label"].unique())
-        unique_children = ['All'] + sorted(hierarchy_df["Child Combined Label"].unique())
-
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_parent = st.selectbox('Select Parent (EN / JA)', unique_parents)
-        with col2:
-            selected_child = st.selectbox('Select Child (EN / JA)', unique_children)
-
-        # Filter
-        filtered_df = hierarchy_df.copy()
-        if selected_parent != 'All':
-            filtered_df = filtered_df[filtered_df["Parent Combined Label"] == selected_parent]
-        if selected_child != 'All':
-            filtered_df = filtered_df[filtered_df["Child Combined Label"] == selected_child]
-            
-        st.dataframe(filtered_df)
-
-        # Update the treemap visualization with the filtered DataFrame
-        fig = visualize_hierarchy(filtered_df)
-        st.plotly_chart(fig)
+        # st.write(relationship_files["cal"])
         
-        st.header('Visualize Calculations')
-        calculations = parse_calculations(relationship_files["cal"], NAMESPACES)
-        calculations_df = calculations_to_dataframe(calculations, labels)
-        st.dataframe(calculations_df)
+        final_df = pd.DataFrame()
+        for cal_file in relationship_files["cal"]:
+            calc_df = parse_calculations(cal_file, NAMESPACES)
+            final_df = pd.concat([final_df, calc_df])
+        # st.write(final_df.head())
+        
+        enriched_df = enrich_calculations_with_labels(final_df, df)
+        st.dataframe(enriched_df.head())
         
     except Exception as e:
         st.error(f"An error occurred: {e}")
